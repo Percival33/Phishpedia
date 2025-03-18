@@ -7,6 +7,7 @@ import cv2
 from configs import load_config
 from logo_recog import pred_rcnn, vis
 from logo_matching import check_domain_brand_inconsistency
+import wandb
 
 # from text_recog import check_email_credential_taking
 # import pickle
@@ -86,7 +87,7 @@ class PhishpediaWrapper:
     """Phishpedia"""
 
     # @profile
-    def test_orig_phishpedia(self, url, screenshot_path, html_path):
+    def test_orig_phishpedia(self, url, screenshot_path, html_path, run=None):
         # 0 for benign, 1 for phish, default is benign
         phish_category = 0
         pred_target = None
@@ -197,13 +198,21 @@ if __name__ == "__main__":
 
     """run"""
     today = datetime.now().strftime("%Y%m%d")
+    run = None
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--folder", required=True, type=str)
     parser.add_argument(
         "--output_txt", default=f"{today}_results.txt", help="Output txt path"
     )
+    parser.add_argument("--log", action="store_true", help="Enable logging to wandb")
     args = parser.parse_args()
+    if args.log:
+        run = wandb.init(
+            project="Phishpedia",
+            group="phishpedia",
+            config=args,
+        )
 
     request_dir = args.folder
     phishpedia_cls = PhishpediaWrapper()
@@ -242,7 +251,7 @@ if __name__ == "__main__":
             pred_boxes,
             logo_recog_time,
             logo_match_time,
-        ) = phishpedia_cls.test_orig_phishpedia(url, screenshot_path, html_path)
+        ) = phishpedia_cls.test_orig_phishpedia(url, screenshot_path, html_path, run)
 
         try:
             with open(result_txt, "a+", encoding="ISO-8859-1") as f:
@@ -273,3 +282,8 @@ if __name__ == "__main__":
         if phish_category:
             os.makedirs(os.path.join(request_dir, folder), exist_ok=True)
             cv2.imwrite(os.path.join(request_dir, folder, "predict.png"), plotvis)
+
+    print("Saving results...")
+    run.save(result_txt)
+    run.finish()
+    print("Done")

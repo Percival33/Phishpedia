@@ -4,6 +4,7 @@
 models
 .venv
 datasets
-
+.env
 .idea
 .vscode
+/wandb/
