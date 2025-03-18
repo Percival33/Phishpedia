@@ -4,11 +4,11 @@ import re
 def pred_text_in_image(ocr_model, shot_path):
     result = ocr_model.ocr(shot_path, cls=True)
     if result is None or result[0] is None:
-        return ''
+        return ""
 
     most_fit_results = result[0]
     ocr_text = [line[1][0] for line in most_fit_results]
-    detected_text = ' '.join(ocr_text)
+    detected_text = " ".join(ocr_text)
 
     return detected_text
 
@@ -21,8 +21,8 @@ def check_email_credential_taking(ocr_model, shot_path):
 
 
 def rule_matching(detected_text):
-    email_login_pattern = r'邮箱.*登录|邮箱.*登陆|邮件.*登录|邮件.*登陆'
-    specified_email_pattern = r'@[\w.-]+\.\w+'
+    email_login_pattern = r"邮箱.*登录|邮箱.*登陆|邮件.*登录|邮件.*登陆"
+    specified_email_pattern = r"@[\w.-]+\.\w+"
 
     if re.findall(email_login_pattern, detected_text):
         find_email = re.findall(specified_email_pattern, detected_text)

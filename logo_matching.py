@@ -40,7 +40,9 @@ COUNTRY_TLDs = [
     ".bm",
     ".bt",
     ".bo",
-    ".bq",".an",".nl",
+    ".bq",
+    ".an",
+    ".nl",
     ".ba",
     ".bw",
     ".bv",
@@ -80,7 +82,8 @@ COUNTRY_TLDs = [
     ".dj",
     ".dm",
     ".do",
-    ".tl",".tp",
+    ".tl",
+    ".tp",
     ".ec",
     ".eg",
     ".sv",
@@ -181,7 +184,8 @@ COUNTRY_TLDs = [
     ".ng",
     ".nu",
     ".nf",
-    ".nc",".tr",
+    ".nc",
+    ".tr",
     ".kp",
     ".mp",
     ".no",
@@ -203,12 +207,17 @@ COUNTRY_TLDs = [
     ".ru",
     ".rw",
     ".re",
-    ".bq",".an",
-    ".bl",".gp",".fr",
+    ".bq",
+    ".an",
+    ".bl",
+    ".gp",
+    ".fr",
     ".sh",
     ".kn",
     ".lc",
-    ".mf",".gp",".fr",
+    ".mf",
+    ".gp",
+    ".fr",
     ".pm",
     ".vc",
     ".ws",
@@ -220,8 +229,11 @@ COUNTRY_TLDs = [
     ".sc",
     ".sl",
     ".sg",
-    ".bq",".an",".nl",
-    ".sx",".an",
+    ".bq",
+    ".an",
+    ".nl",
+    ".sx",
+    ".an",
     ".sk",
     ".si",
     ".sb",
@@ -270,21 +282,27 @@ COUNTRY_TLDs = [
     ".ma",
     ".ye",
     ".zm",
-    ".zw"
+    ".zw",
 ]
 
-def check_domain_brand_inconsistency(logo_boxes,
-                                     domain_map_path: str,
-                                     model, logo_feat_list,
-                                     file_name_list, shot_path: str,
-                                     url: str, similarity_threshold: float,
-                                     topk: float = 3):
+
+def check_domain_brand_inconsistency(
+    logo_boxes,
+    domain_map_path: str,
+    model,
+    logo_feat_list,
+    file_name_list,
+    shot_path: str,
+    url: str,
+    similarity_threshold: float,
+    topk: float = 3,
+):
     # targetlist domain list
-    with open(domain_map_path, 'rb') as handle:
+    with open(domain_map_path, "rb") as handle:
         domain_map = pickle.load(handle)
 
-    print('number of logo boxes:', len(logo_boxes))
-    suffix_part = '.'+ tldextract.extract(url).suffix
+    print("number of logo boxes:", len(logo_boxes))
+    suffix_part = "." + tldextract.extract(url).suffix
     domain_part = tldextract.extract(url).domain
     extracted_domain = domain_part + suffix_part
     matched_target, matched_domain, matched_coord, this_conf = None, None, None, None
@@ -292,35 +310,48 @@ def check_domain_brand_inconsistency(logo_boxes,
     if len(logo_boxes) > 0:
         # siamese prediction for logo box
         for i, coord in enumerate(logo_boxes):
-
             if i == topk:
                 break
 
             min_x, min_y, max_x, max_y = coord
             bbox = [float(min_x), float(min_y), float(max_x), float(max_y)]
-            matched_target, matched_domain, this_conf = pred_brand(model, domain_map,
-                                                                   logo_feat_list, file_name_list,
-                                                                   shot_path, bbox,
-                                                                   similarity_threshold=similarity_threshold,
-                                                                   grayscale=False,
-                                                                   do_aspect_ratio_check=False,
-                                                                   do_resolution_alignment=False)
+            matched_target, matched_domain, this_conf = pred_brand(
+                model,
+                domain_map,
+                logo_feat_list,
+                file_name_list,
+                shot_path,
+                bbox,
+                similarity_threshold=similarity_threshold,
+                grayscale=False,
+                do_aspect_ratio_check=False,
+                do_resolution_alignment=False,
+            )
 
             # print(target_this, domain_this, this_conf)
             # domain matcher to avoid FP
             if matched_target and matched_domain:
                 matched_coord = coord
-                matched_domain_parts = [tldextract.extract(x).domain for x in matched_domain]
-                matched_suffix_parts = [tldextract.extract(x).suffix for x in matched_domain]
-                
+                matched_domain_parts = [
+                    tldextract.extract(x).domain for x in matched_domain
+                ]
+                # matched_suffix_parts = [
+                #     tldextract.extract(x).suffix for x in matched_domain
+                # ]
+
                 # If the webpage domain exactly aligns with the target website's domain => Benign
                 if extracted_domain in matched_domain:
-                    matched_target, matched_domain = None, None  # Clear if domains are consistent
-                elif domain_part in matched_domain_parts: # # elIf only the 2nd-level-domains align, and the tld is regional  => Benign
-                    if "." + suffix_part.split('.')[-1] in COUNTRY_TLDs:
+                    matched_target, matched_domain = (
+                        None,
+                        None,
+                    )  # Clear if domains are consistent
+                elif (
+                    domain_part in matched_domain_parts
+                ):  # # elIf only the 2nd-level-domains align, and the tld is regional  => Benign
+                    if "." + suffix_part.split(".")[-1] in COUNTRY_TLDs:
                         matched_target, matched_domain = None, None
                     else:
-                        break # Inconsistent domain found, break the loop
+                        break  # Inconsistent domain found, break the loop
                 else:
                     break  # Inconsistent domain found, break the loop
 
@@ -328,22 +359,22 @@ def check_domain_brand_inconsistency(logo_boxes,
 
 
 def load_model_weights(num_classes: int, weights_path: str):
-    '''
+    """
     :param num_classes: number of protected brands
     :param weights_path: siamese weights
     :return model: siamese model
-    '''
+    """
     # Initialize model
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     model = KNOWN_MODELS["BiT-M-R50x1"](head_size=num_classes, zero_head=True)
 
     # Load weights
-    weights = torch.load(weights_path, map_location='cpu')
-    weights = weights['model'] if 'model' in weights.keys() else weights
+    weights = torch.load(weights_path, map_location="cpu")
+    weights = weights["model"] if "model" in weights.keys() else weights
     new_state_dict = OrderedDict()
     for k, v in weights.items():
-        if 'module.' in k:
-            name = k.split('module.')[1]
+        if "module." in k:
+            name = k.split("module.")[1]
         else:
             name = k
         new_state_dict[name] = v
@@ -355,13 +386,13 @@ def load_model_weights(num_classes: int, weights_path: str):
 
 
 def cache_reference_list(model, targetlist_path: str, grayscale=False):
-    '''
+    """
     cache the embeddings of the reference list
     :param targetlist_path: targetlist folder
     :param grayscale: convert logo to grayscale or not, default is RGB
     :return logo_feat_list: targetlist embeddings
     :return file_name_list: targetlist paths
-    '''
+    """
 
     # Prediction for targetlists
     logo_feat_list = []
@@ -369,22 +400,33 @@ def cache_reference_list(model, targetlist_path: str, grayscale=False):
 
     target_list = os.listdir(targetlist_path)
     for target in tqdm(target_list):
-        if target.startswith('.'):  # skip hidden files
+        if target.startswith("."):  # skip hidden files
             continue
         logo_list = os.listdir(os.path.join(targetlist_path, target))
         for logo_path in logo_list:
             # List of valid image extensions
-            valid_extensions = ['.png', 'PNG', '.jpeg', '.jpg', '.JPG', '.JPEG']
+            valid_extensions = [".png", "PNG", ".jpeg", ".jpg", ".JPG", ".JPEG"]
             if any(logo_path.endswith(ext) for ext in valid_extensions):
-                skip_prefixes = ['loginpage', 'homepage']
-                if any(logo_path.startswith(prefix) for prefix in skip_prefixes):  # skip homepage/loginpage
+                skip_prefixes = ["loginpage", "homepage"]
+                if any(
+                    logo_path.startswith(prefix) for prefix in skip_prefixes
+                ):  # skip homepage/loginpage
                     continue
                 try:
-                    logo_feat_list.append(get_embedding(img=os.path.join(targetlist_path, target, logo_path),
-                                                        model=model, grayscale=grayscale))
-                    file_name_list.append(str(os.path.join(targetlist_path, target, logo_path)))
+                    logo_feat_list.append(
+                        get_embedding(
+                            img=os.path.join(targetlist_path, target, logo_path),
+                            model=model,
+                            grayscale=grayscale,
+                        )
+                    )
+                    file_name_list.append(
+                        str(os.path.join(targetlist_path, target, logo_path))
+                    )
                 except OSError:
-                    print(f"Error opening image: {os.path.join(targetlist_path, target, logo_path)}")
+                    print(
+                        f"Error opening image: {os.path.join(targetlist_path, target, logo_path)}"
+                    )
                     continue
 
     return logo_feat_list, file_name_list
@@ -392,23 +434,25 @@ def cache_reference_list(model, targetlist_path: str, grayscale=False):
 
 @torch.no_grad()
 def get_embedding(img, model, grayscale=False):
-    '''
+    """
     Inference for a single image
     :param img: image path in str or image in PIL.Image
     :param model: model to make inference
     :param grayscale: convert image to grayscale or not
     :return feature embedding of shape (2048,)
-    '''
+    """
     #     img_size = 224
     img_size = 128
     mean = [0.5, 0.5, 0.5]
     std = [0.5, 0.5, 0.5]
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     img_transforms = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize(mean=mean, std=std),
-         ])
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
+        ]
+    )
 
     img = Image.open(img) if isinstance(img, str) else img
     img = img.convert("L").convert("RGB") if grayscale else img.convert("RGB")
@@ -421,9 +465,9 @@ def get_embedding(img, model, grayscale=False):
             (max(img.size) - img.size[0]) // 2,
             (max(img.size) - img.size[1]) // 2,
             (max(img.size) - img.size[0]) // 2,
-            (max(img.size) - img.size[1]) // 2
+            (max(img.size) - img.size[1]) // 2,
         ),
-        fill=pad_color
+        fill=pad_color,
     )
 
     img = img.resize((img_size, img_size))
@@ -432,16 +476,26 @@ def get_embedding(img, model, grayscale=False):
     img = img_transforms(img)
     img = img[None, ...].to(device)
     logo_feat = model.features(img)
-    logo_feat = l2_norm(logo_feat).squeeze(0).cpu().numpy()  # L2-normalization final shape is (2048,)
+    logo_feat = (
+        l2_norm(logo_feat).squeeze(0).cpu().numpy()
+    )  # L2-normalization final shape is (2048,)
 
     return logo_feat
 
 
-def pred_brand(model, domain_map, logo_feat_list, file_name_list, shot_path: str, gt_bbox, similarity_threshold,
-               grayscale=False,
-               do_resolution_alignment=True,
-               do_aspect_ratio_check=True):
-    '''
+def pred_brand(
+    model,
+    domain_map,
+    logo_feat_list,
+    file_name_list,
+    shot_path: str,
+    gt_bbox,
+    similarity_threshold,
+    grayscale=False,
+    do_resolution_alignment=True,
+    do_aspect_ratio_check=True,
+):
+    """
     Return predicted brand for one cropped image
     :param model: model to use
     :param domain_map: brand-domain dictionary
@@ -454,12 +508,12 @@ def pred_brand(model, domain_map, logo_feat_list, file_name_list, shot_path: str
     :param do_aspect_ratio_check: once two logos are similar, whether we want to a further check on their aspect ratios
     :param grayscale: convert image(cropped) to grayscale or not
     :return: predicted target, predicted target's domain
-    '''
+    """
 
     try:
         img = Image.open(shot_path)
     except OSError:  # if the image cannot be identified, return nothing
-        print('Screenshot cannot be open')
+        print("Screenshot cannot be open")
         return None, None, None
 
     # get predicted box --> crop from screenshot
@@ -467,7 +521,9 @@ def pred_brand(model, domain_map, logo_feat_list, file_name_list, shot_path: str
     img_feat = get_embedding(cropped, model, grayscale=grayscale)
 
     # get cosine similarity with every protected logo
-    sim_list = logo_feat_list @ img_feat.T  # take dot product for every pair of embeddings (Cosine Similarity)
+    sim_list = (
+        logo_feat_list @ img_feat.T
+    )  # take dot product for every pair of embeddings (Cosine Similarity)
     pred_brand_list = file_name_list
 
     assert len(sim_list) == len(pred_brand_list)
@@ -478,7 +534,9 @@ def pred_brand(model, domain_map, logo_feat_list, file_name_list, shot_path: str
     sim_list = np.array(sim_list)[idx]
 
     # top1,2,3 candidate logos
-    top3_brandlist = [brand_converter(os.path.basename(os.path.dirname(x))) for x in pred_brand_list]
+    top3_brandlist = [
+        brand_converter(os.path.basename(os.path.dirname(x))) for x in pred_brand_list
+    ]
     top3_domainlist = [domain_map[x] for x in top3_brandlist]
     top3_simlist = sim_list
 

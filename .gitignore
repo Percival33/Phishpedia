@@ -1,3 +1,9 @@
 *.zip
 *.pkl
 *.pth*
+models
+.venv
+datasets
+
+.idea
+.vscode

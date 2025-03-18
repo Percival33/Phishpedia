@@ -5,8 +5,8 @@ from phishpedia import PhishpediaWrapper, result_file_write
 
 def test_result_file_write():
     mock = mock_open()
-    with patch('builtins.open', mock):
-        with open('fake_file.txt', 'w') as f:
+    with patch("builtins.open", mock):
+        with open("fake_file.txt", "w") as f:
             result_file_write(
                 f,
                 folder="test_folder",
@@ -16,9 +16,9 @@ def test_result_file_write():
                 matched_domain="example.com",
                 siamese_conf=0.95,
                 logo_recog_time=0.1234,
-                logo_match_time=0.5678
+                logo_match_time=0.5678,
             )
-    mock.assert_called_once_with('fake_file.txt', 'w')
+    mock.assert_called_once_with("fake_file.txt", "w")
     handle = mock()
     handle.write.assert_any_call("test_folder\t")
     handle.write.assert_any_call("http://example.com\t")
@@ -32,23 +32,25 @@ def test_result_file_write():
 
 @pytest.fixture
 def phishpedia_wrapper():
-    with patch('phishpedia.load_config') as mock_load_config:
+    with patch("phishpedia.load_config") as mock_load_config:
         mock_load_config.return_value = (
             MagicMock(),  # ELE_MODEL
-            0.8,           # SIAMESE_THRE
+            0.8,  # SIAMESE_THRE
             MagicMock(),  # SIAMESE_MODEL
-            [],            # LOGO_FEATS
-            [],            # LOGO_FILES
-            'path/to/domain_map'  # DOMAIN_MAP_PATH
+            [],  # LOGO_FEATS
+            [],  # LOGO_FILES
+            "path/to/domain_map",  # DOMAIN_MAP_PATH
         )
         wrapper = PhishpediaWrapper()
     return wrapper
 
 
-@patch('phishpedia.pred_rcnn')
-@patch('phishpedia.vis')
-@patch('phishpedia.check_domain_brand_inconsistency')
-def test_test_orig_phishpedia_no_logo(mock_check_inconsistency, mock_vis, mock_pred_rcnn, phishpedia_wrapper):
+@patch("phishpedia.pred_rcnn")
+@patch("phishpedia.vis")
+@patch("phishpedia.check_domain_brand_inconsistency")
+def test_test_orig_phishpedia_no_logo(
+    mock_check_inconsistency, mock_vis, mock_pred_rcnn, phishpedia_wrapper
+):
     # 设置 mock 返回值
     mock_pred_rcnn.return_value = None
     mock_vis.return_value = "visualization_image"
@@ -57,7 +59,7 @@ def test_test_orig_phishpedia_no_logo(mock_check_inconsistency, mock_vis, mock_p
     result = phishpedia_wrapper.test_orig_phishpedia(
         url="http://example.com",
         screenshot_path="path/to/shot.png",
-        html_path="path/to/html.txt"
+        html_path="path/to/html.txt",
     )
 
     # 断言返回值
@@ -71,6 +73,8 @@ def test_test_orig_phishpedia_no_logo(mock_check_inconsistency, mock_vis, mock_p
     assert result[7] == 0  # logo_match_time
 
     # 断言被调用
-    mock_pred_rcnn.assert_called_once_with(im="path/to/shot.png", predictor=phishpedia_wrapper.ELE_MODEL)
+    mock_pred_rcnn.assert_called_once_with(
+        im="path/to/shot.png", predictor=phishpedia_wrapper.ELE_MODEL
+    )
     mock_vis.assert_called_once_with("path/to/shot.png", None)
     mock_check_inconsistency.assert_not_called()
