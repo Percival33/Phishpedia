@@ -1,6 +1,8 @@
-#!/usr/bin/env just --justfile
+# !/usr/bin/env just --justfile
+default:
+    just --list
 
-# Default recipe that detects platform and installs accordingly
+# Install depencies based on the operating system
 install:
     #!/usr/bin/env bash
     OS=$(uname -s)
@@ -27,7 +29,7 @@ install-macos:
     uv pip install torch==1.9.0 torchvision==0.10.0 torchaudio==0.9.0
 
     # Install Detectron2 from GitHub for macOS
-    uv pip install 'git+https://github.com/facebookresearch/detectron2.git'
+    uv pip install 'git+https://github.com/facebookresearch/detectron2.git' --no-build-isolation
 
     echo "macOS installation complete!"
 
@@ -116,6 +118,7 @@ extract-targetlist:
 setup-models: download-models extract-targetlist
     echo "Model setup complete. All files downloaded and extracted."
 
+# Setup the environment (install dependencies and download models)
 setup: install setup-models
     echo "Setup complete."
 
