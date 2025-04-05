@@ -5,15 +5,15 @@ import numpy as np
 import torch
 
 
-def pred_rcnn(im, predictor):
+def pred_rcnn(im_path, predictor, img=None):
     """
     Perform inference for RCNN
-    :param im:
+    :param im_path:
     :param predictor:
+    :param img: if None, use im_path to read image
     :return:
     """
-    im = cv2.imread(im)
-
+    im = cv2.imread(im_path) if img is None else img
     if im is not None:
         if im.shape[-1] == 4:
             im = cv2.cvtColor(im, cv2.COLOR_BGRA2BGR)

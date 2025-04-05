@@ -9,6 +9,7 @@ from collections import OrderedDict
 from tqdm import tqdm
 from tldextract import tldextract
 import pickle
+import cv2
 
 COUNTRY_TLDs = [
     ".af",
@@ -287,15 +288,16 @@ COUNTRY_TLDs = [
 
 
 def check_domain_brand_inconsistency(
-    logo_boxes,
-    domain_map_path: str,
-    model,
-    logo_feat_list,
-    file_name_list,
-    shot_path: str,
-    url: str,
-    similarity_threshold: float,
-    topk: float = 3,
+        logo_boxes,
+        domain_map_path: str,
+        model,
+        logo_feat_list,
+        file_name_list,
+        shot_path: str,
+        url: str,
+        similarity_threshold: float,
+        topk: float = 3,
+        img=None,
 ):
     # targetlist domain list
     with open(domain_map_path, "rb") as handle:
@@ -326,6 +328,7 @@ def check_domain_brand_inconsistency(
                 grayscale=False,
                 do_aspect_ratio_check=False,
                 do_resolution_alignment=False,
+                img=img,
             )
 
             # print(target_this, domain_this, this_conf)
@@ -346,7 +349,7 @@ def check_domain_brand_inconsistency(
                         None,
                     )  # Clear if domains are consistent
                 elif (
-                    domain_part in matched_domain_parts
+                        domain_part in matched_domain_parts
                 ):  # # elIf only the 2nd-level-domains align, and the tld is regional  => Benign
                     if "." + suffix_part.split(".")[-1] in COUNTRY_TLDs:
                         matched_target, matched_domain = None, None
@@ -409,7 +412,7 @@ def cache_reference_list(model, targetlist_path: str, grayscale=False):
             if any(logo_path.endswith(ext) for ext in valid_extensions):
                 skip_prefixes = ["loginpage", "homepage"]
                 if any(
-                    logo_path.startswith(prefix) for prefix in skip_prefixes
+                        logo_path.startswith(prefix) for prefix in skip_prefixes
                 ):  # skip homepage/loginpage
                     continue
                 try:
@@ -484,16 +487,17 @@ def get_embedding(img, model, grayscale=False):
 
 
 def pred_brand(
-    model,
-    domain_map,
-    logo_feat_list,
-    file_name_list,
-    shot_path: str,
-    gt_bbox,
-    similarity_threshold,
-    grayscale=False,
-    do_resolution_alignment=True,
-    do_aspect_ratio_check=True,
+        model,
+        domain_map,
+        logo_feat_list,
+        file_name_list,
+        shot_path: str,
+        gt_bbox,
+        similarity_threshold,
+        grayscale=False,
+        do_resolution_alignment=True,
+        do_aspect_ratio_check=True,
+        img=None,
 ):
     """
     Return predicted brand for one cropped image
@@ -509,12 +513,15 @@ def pred_brand(
     :param grayscale: convert image(cropped) to grayscale or not
     :return: predicted target, predicted target's domain
     """
-
-    try:
-        img = Image.open(shot_path)
-    except OSError:  # if the image cannot be identified, return nothing
-        print("Screenshot cannot be open")
-        return None, None, None
+    if img is None:
+        try:
+            img = Image.open(shot_path)
+        except OSError:  # if the image cannot be identified, return nothing
+            print("Screenshot cannot be open")
+            return None, None, None
+    else:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(img)
 
     # get predicted box --> crop from screenshot
     cropped = img.crop((gt_bbox[0], gt_bbox[1], gt_bbox[2], gt_bbox[3]))
@@ -522,7 +529,7 @@ def pred_brand(
 
     # get cosine similarity with every protected logo
     sim_list = (
-        logo_feat_list @ img_feat.T
+            logo_feat_list @ img_feat.T
     )  # take dot product for every pair of embeddings (Cosine Similarity)
     pred_brand_list = file_name_list
 

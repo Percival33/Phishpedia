@@ -20,7 +20,7 @@ def parse_phishpedia_csv(file_path, is_phish=False):
     true_class_value = 1 if is_phish else 0
 
     # Try different encoding approaches
-    encodings_to_try = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+    encodings_to_try = ["utf-8", "latin-1", "cp1252", "iso-8859-1"]
 
     for encoding in encodings_to_try:
         try:
@@ -40,7 +40,7 @@ def parse_phishpedia_csv(file_path, is_phish=False):
                     "logo_match_time",
                 ],
                 encoding=encoding,
-                on_bad_lines='skip'  # Skip problematic lines
+                on_bad_lines="skip",  # Skip problematic lines
             )
 
             # Handle any Unicode conversion for string columns
@@ -49,7 +49,8 @@ def parse_phishpedia_csv(file_path, is_phish=False):
                 if col in df_raw.columns:
                     # Convert to unicode strings properly
                     df_raw[col] = df_raw[col].apply(
-                        lambda x: x.decode(encoding).encode('utf-8') if isinstance(x, bytes)
+                        lambda x: x.decode(encoding).encode("utf-8")
+                        if isinstance(x, bytes)
                         else (x if isinstance(x, str) else str(x))
                     )
 
@@ -61,13 +62,17 @@ def parse_phishpedia_csv(file_path, is_phish=False):
                     "pp_target": df_raw["pred_target"],
                     "url": df_raw["url"],
                     "true_class": true_class_value,  # Set based on is_phish argument
-                    "true_target": df_raw["folder"].str.split("+").str[0] if is_phish else "benign",
+                    "true_target": df_raw["folder"].str.split("+").str[0]
+                    if is_phish
+                    else "benign",
                     "pp_conf": df_raw["siamese_conf"],
                 }
             )
 
             print(f"Successfully parsed with {encoding} encoding")
-            print(f"Data classified as {'phishing' if is_phish else 'non-phishing'} (true_class={true_class_value})")
+            print(
+                f"Data classified as {'phishing' if is_phish else 'non-phishing'} (true_class={true_class_value})"
+            )
             return df_processed
 
         except Exception as e:
@@ -76,11 +81,12 @@ def parse_phishpedia_csv(file_path, is_phish=False):
     # Last resort: use open() with encoding handling and then pass to pandas
     try:
         print("Trying with explicit file opening and error handling...")
-        with io.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with io.open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         # Create a StringIO object to be read by pandas
         from io import StringIO
+
         df_raw = pd.read_csv(
             StringIO(content),
             sep="\t",
@@ -94,7 +100,7 @@ def parse_phishpedia_csv(file_path, is_phish=False):
                 "logo_recog_time",
                 "logo_match_time",
             ],
-            on_bad_lines='skip'
+            on_bad_lines="skip",
         )
 
         # Create a new DataFrame with the required columns
@@ -111,7 +117,9 @@ def parse_phishpedia_csv(file_path, is_phish=False):
         )
 
         print("Successfully parsed with explicit encoding handling")
-        print(f"Data classified as {'phishing' if is_phish else 'non-phishing'} (true_class={true_class_value})")
+        print(
+            f"Data classified as {'phishing' if is_phish else 'non-phishing'} (true_class={true_class_value})"
+        )
         return df_processed
 
     except Exception as e:
@@ -140,8 +148,12 @@ def analyze_dataframe(df):
 
     # Calculate average confidence
     avg_confidence = df["pp_conf"].mean()
-    avg_phishing_confidence = df[df["pp_class"] == 1]["pp_conf"].mean() if phishing_count > 0 else 0
-    avg_non_phishing_confidence = df[df["pp_class"] == 0]["pp_conf"].mean() if non_phishing_count > 0 else 0
+    avg_phishing_confidence = (
+        df[df["pp_class"] == 1]["pp_conf"].mean() if phishing_count > 0 else 0
+    )
+    avg_non_phishing_confidence = (
+        df[df["pp_class"] == 0]["pp_conf"].mean() if non_phishing_count > 0 else 0
+    )
 
     # Get unique target brands
     unique_targets = df["pp_target"].nunique()
@@ -175,12 +187,12 @@ def main():
     parser.add_argument(
         "--encoding",
         help="Force a specific encoding (optional, will auto-detect if not specified)",
-        default=None
+        default=None,
     )
     parser.add_argument(
         "--is-phish",
         action="store_true",
-        help="Set true_class to 1 (phishing), default is 0 (non-phishing)"
+        help="Set true_class to 1 (phishing), default is 0 (non-phishing)",
     )
     args = parser.parse_args()
 

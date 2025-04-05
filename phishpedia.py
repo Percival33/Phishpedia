@@ -61,33 +61,22 @@ class PhishpediaWrapper:
     def _to_device(self):
         self.SIAMESE_MODEL.to(self._DEVICE)
 
-    # def simple_input_box_regex(self, html_path):
-    #     with open(html_path, 'r', encoding='ISO-8859-1') as f:
-    #         page = f.read()
-    #         tree = html.fromstring(page)
-    #     if tree is None:  # parsing into tree failed
-    #         return False
-
-    #     ## filter out search boxes
-    #     inputs = tree.xpath(
-    #         './/input[not(@type="hidden") and not(contains(@name, "search"))'
-    #         ' and not(contains(@placeholder, "search"))]'
-    #     )
-    #     search_pattern = re.compile(r'\b(search|query|find|keyword)\b', re.IGNORECASE)
-    #     sensitive_inputs = [
-    #         inp for inp in inputs
-    #         if not search_pattern.search(inp.get('name', '') + inp.get('placeholder', ''))
-    #     ]
-
-    #     ## a login form will have at least 1 input box
-    #     if len(sensitive_inputs) > 0:
-    #         return True
-    #     return False
-
     """Phishpedia"""
 
+    """
+    {
+                "file"
+                "pp_class"
+                "pp_target"
+                "url"
+                "true_class"
+                "true_target"
+                "pp_conf"
+            }
+    """
+
     # @profile
-    def test_orig_phishpedia(self, url, screenshot_path, html_path, run=None):
+    def test_orig_phishpedia(self, url, screenshot_path, html_path, img=None, run=None):
         # 0 for benign, 1 for phish, default is benign
         phish_category = 0
         pred_target = None
@@ -99,7 +88,9 @@ class PhishpediaWrapper:
 
         ####################### Step1: Logo detector ##############################################
         start_time = time.time()
-        pred_boxes = pred_rcnn(im=screenshot_path, predictor=self.ELE_MODEL)
+        pred_boxes = pred_rcnn(
+            im_path=screenshot_path, predictor=self.ELE_MODEL, img=img
+        )
         logo_recog_time = time.time() - start_time
 
         if pred_boxes is not None:
@@ -133,6 +124,7 @@ class PhishpediaWrapper:
                 shot_path=screenshot_path,
                 similarity_threshold=self.SIAMESE_THRE,
                 topk=1,
+                img=img,
             )
         )
         logo_match_time = time.time() - start_time
